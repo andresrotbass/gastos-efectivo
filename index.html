@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gastos Efectivo</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Helvetica Neue', sans-serif;
+      background: #0f0f0f;
+      color: #f0f0f0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .card {
+      background: #1a1a1a;
+      border-radius: 16px;
+      padding: 32px 24px;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+
+    h1 {
+      font-size: 22px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #fff;
+    }
+
+    .subtitle {
+      font-size: 13px;
+      color: #666;
+      margin-bottom: 28px;
+    }
+
+    .field {
+      margin-bottom: 18px;
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 500;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      background: #252525;
+      border: 1px solid #333;
+      border-radius: 10px;
+      padding: 14px 16px;
+      font-size: 16px;
+      color: #f0f0f0;
+      outline: none;
+      transition: border-color 0.2s;
+      appearance: none;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: #4a9eff;
+    }
+
+    select option {
+      background: #252525;
+    }
+
+    .importe-wrap {
+      position: relative;
+    }
+
+    .importe-wrap span {
+      position: absolute;
+      left: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #666;
+      font-size: 16px;
+    }
+
+    .importe-wrap input {
+      padding-left: 36px;
+    }
+
+    button {
+      width: 100%;
+      background: #4a9eff;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 16px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: background 0.2s, transform 0.1s;
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    button:disabled {
+      background: #333;
+      color: #666;
+      cursor: not-allowed;
+    }
+
+    .toast {
+      display: none;
+      margin-top: 16px;
+      padding: 14px 16px;
+      border-radius: 10px;
+      font-size: 14px;
+      text-align: center;
+    }
+
+    .toast.ok {
+      background: #1a3a1a;
+      color: #4caf50;
+      border: 1px solid #2d5a2d;
+    }
+
+    .toast.error {
+      background: #3a1a1a;
+      color: #f44336;
+      border: 1px solid #5a2d2d;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>💸 Gasto en efectivo</h1>
+    <p class="subtitle">Se guarda directo en tu Google Sheet</p>
+
+    <div class="field">
+      <label>Fecha</label>
+      <input type="date" id="fecha">
+    </div>
+
+    <div class="field">
+      <label>Categoría</label>
+      <select id="categoria">
+        <option value="Expensas">Expensas</option>
+        <option value="Jas">Jas</option>
+        <option value="Salud">Salud</option>
+        <option value="Transporte">Transporte</option>
+        <option value="Supermercado">Supermercado</option>
+        <option value="Entretenimiento">Entretenimiento</option>
+        <option value="Musica">Musica</option>
+        <option value="Educacion">Educacion</option>
+        <option value="Hogar">Hogar</option>
+        <option value="Otro">Otro</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>Descripción</label>
+      <input type="text" id="descripcion" placeholder="ej: almuerzo, farmacia...">
+    </div>
+
+    <div class="field">
+      <label>Importe</label>
+      <div class="importe-wrap">
+        <span>$</span>
+        <input type="number" id="importe" placeholder="0" min="0" step="0.01">
+      </div>
+    </div>
+
+    <button id="btn" onclick="guardar()">Guardar gasto</button>
+    <div class="toast" id="toast"></div>
+  </div>
+
+  <script>
+    const API_URL = 'TU_URL_DE_WEB_APP_ACÁ'; // ← reemplazá con la URL del deploy
+
+    // Fecha de hoy por defecto
+    const hoy = new Date();
+    const yyyy = hoy.getFullYear();
+    const mm = String(hoy.getMonth() + 1).padStart(2, '0');
+    const dd = String(hoy.getDate()).padStart(2, '0');
+    document.getElementById('fecha').value = `${yyyy}-${mm}-${dd}`;
+
+    async function guardar() {
+      const fecha = document.getElementById('fecha').value;
+      const categoria = document.getElementById('categoria').value;
+      const descripcion = document.getElementById('descripcion').value.trim();
+      const importe = document.getElementById('importe').value;
+
+      if (!descripcion || !importe || parseFloat(importe) <= 0) {
+        mostrarToast('Completá descripción e importe', false);
+        return;
+      }
+
+      // Convertir fecha de YYYY-MM-DD a DD/MM/YYYY
+      const [y, m, d] = fecha.split('-');
+      const fechaFormateada = `${d}/${m}/${y}`;
+
+      const btn = document.getElementById('btn');
+      btn.disabled = true;
+      btn.textContent = 'Guardando...';
+
+      try {
+        const res = await fetch(API_URL, {
+          method: 'POST',
+          body: JSON.stringify({
+            fecha: fechaFormateada,
+            categoria,
+            proveedor: 'Efectivo',
+            descripcion,
+            importe: parseFloat(importe)
+          })
+        });
+
+        const data = await res.json();
+
+        if (data.ok) {
+          mostrarToast('✅ Gasto guardado en el Sheet', true);
+          document.getElementById('descripcion').value = '';
+          document.getElementById('importe').value = '';
+        } else {
+          mostrarToast('Error: ' + (data.error || 'algo falló'), false);
+        }
+      } catch(err) {
+        mostrarToast('Error de conexión', false);
+      }
+
+      btn.disabled = false;
+      btn.textContent = 'Guardar gasto';
+    }
+
+    function mostrarToast(msg, ok) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.className = 'toast ' + (ok ? 'ok' : 'error');
+      t.style.display = 'block';
+      setTimeout(() => t.style.display = 'none', 3000);
+    }
+  </script>
+</body>
+</html>
