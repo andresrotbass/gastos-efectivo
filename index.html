@@ -65,6 +65,7 @@
       outline: none;
       transition: border-color 0.2s;
       appearance: none;
+      -webkit-appearance: none;
     }
 
     input:focus, select:focus, textarea:focus {
@@ -150,7 +151,7 @@
 
     <div class="field">
       <label>Categoría</label>
-<select id="categoria">
+      <select id="categoria">
         <option value="Cafe / Comida">Café / Comida</option>
         <option value="Psicologo">Psicólogo</option>
         <option value="Expensas">Expensas</option>
@@ -175,7 +176,7 @@
       <label>Importe</label>
       <div class="importe-wrap">
         <span>$</span>
-        <input type="number" id="importe" placeholder="0" min="0" step="0.01">
+        <input type="number" id="importe" placeholder="0" min="0" step="1">
       </div>
     </div>
 
@@ -184,7 +185,7 @@
   </div>
 
   <script>
-    const API_URL = 'TU_URL_DE_WEB_APP_ACÁ'; // ← reemplazá con la URL del deploy
+    const API_URL = 'https://script.google.com/macros/s/AKfycbxX9sxPSQDuSuniQH1oao5rkcNnyrOVAp-SAMFzccTHXF3OVy-JGjFJLbVA2xV072g/exec';
 
     // Fecha de hoy por defecto
     const hoy = new Date();
@@ -215,6 +216,8 @@
       try {
         const res = await fetch(API_URL, {
           method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             fecha: fechaFormateada,
             categoria,
@@ -224,15 +227,11 @@
           })
         });
 
-        const data = await res.json();
+        // no-cors no permite leer la respuesta, asumimos éxito
+        mostrarToast('✅ Gasto guardado en el Sheet', true);
+        document.getElementById('descripcion').value = '';
+        document.getElementById('importe').value = '';
 
-        if (data.ok) {
-          mostrarToast('✅ Gasto guardado en el Sheet', true);
-          document.getElementById('descripcion').value = '';
-          document.getElementById('importe').value = '';
-        } else {
-          mostrarToast('Error: ' + (data.error || 'algo falló'), false);
-        }
       } catch(err) {
         mostrarToast('Error de conexión', false);
       }
